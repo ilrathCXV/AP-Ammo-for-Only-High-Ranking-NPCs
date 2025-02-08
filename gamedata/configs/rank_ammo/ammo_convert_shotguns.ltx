@@ -1,25 +1,27 @@
 ; Novice = 1 | Trainee = 2 | Experienced = 3 | Professional = 4 | Veteran = 5 | Expert = 6 | Master = 7 | Legend = 8
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 12x70 (12ga.) - Buck will have higher ap_floor so that it can still be utilized more before going straight to Dart
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 12x70 (12ga.) - Buck will have higher ap_rank so that it can still be utilized more before going straight to Dart
 [ammo_12x70_buck]:ammo_base
-ap_floor = 6
+ap_rank = 6
 ap_sec = ammo_12x76_dart
 
 [ammo_12x76_zhekan]:ammo_base
-ap_floor = 4
+ap_rank = 6
 ap_sec = ammo_12x76_dart
+fmj_rank = 1
+fmj_sec = ammo_12x70_buck
 
 [ammo_12x76_dart]:ammo_base
-fmj_ceil = 5
+fmj_rank = 5
 fmj_sec = ammo_12x76_zhekan
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 20x70 - Vanilla GAMMA has no slugs, so do nothing
 [ammo_20x70_buck]:ammo_base
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 23x75 - Buck will have a low ap_floor so that KS-23/other 4ga. weapons can be deadly, only grunts will get Buck
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 23x75 - Buck will have a low ap_rank so that KS-23/other 4ga. weapons can be deadly, only grunts will get Buck
 [ammo_23x75_shrapnel]:ammo_base
-ap_floor = 3
+ap_rank = 3
 ap_sec = ammo_23x75_barrikada
 
 [ammo_23x75_barrikada]:ammo_base
-fmj_ceil = 2
+fmj_rank = 2
 fmj_sec = ammo_23x75_shrapnel

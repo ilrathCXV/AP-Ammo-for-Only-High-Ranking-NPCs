@@ -13,21 +13,21 @@ end
 
 map_rank_modifiers = {
 	-- Southern Maps
-	["k00_marsh"] = 0,
-	["l01_escape"] = -1,
-	["l02_garbage"] = -1,
-	["y04_pole"] = -1,
+	["k00_marsh"] = -1,
+	["l01_escape"] = -2,
+	["l02_garbage"] = -2,
+	["y04_pole"] = -2,
 	["l05_bar"] = 0,
 	["l06_rostok"] = 0,
 	
 	-- Mid-Maps + Darkscape
 	["l03_agroprom"] = 0,
-	["k01_darkscape"] = 0,
+	["k01_darkscape"] = -1,
 	["l04_darkvalley"] = 0,
 	["k02_trucks_cemetery"] = 0,
 	["l07_military"] = 0,
 	["l09_deadcity"] = 0,
-	["l08_yantar"] = 0,
+	["l08_yantar"] = -1,
 	
 	-- Mid-Northern Maps
 	["jupiter"] = 0,
@@ -77,8 +77,10 @@ rank_table_rating = {
 	["zone_mystic"] = 8
 }
 
--- Endgame factions get a bonus to their rank enum
+-- Certai factions get a bonus/penalty to their rank enum
 faction_rank_adjust = {
+	["zombified"] = -2,
+	["bandit"] = -1,
 	["monolith"] = 0,
 	["greh"] = 1,
 	["isg"] = 2
@@ -299,6 +301,11 @@ function npc_on_net_spawn(npc)
 	
 	local npc_comm = character_community(enemy)
 	
+	-- Bandits will only receive negative rank modifier if not in Dark Valley
+	if (location_name = "l04_darkvalley") then
+		faction_rank_adjust["bandit"] = 0
+	end
+	
 	-- Monolith in Radar/BS that are not Master/Legend will be read as Experienced
 	-- This will reduce most instances of more dangerous AP ammo from being used
 	-- After BS is turned off, Monolith rank will be read as normal
@@ -340,23 +347,28 @@ function try_adjust_ammo(wpn, rank_enum)
     if is_empty(ammo_data) then return end
 	local ammo_data_inv = invert_table(ammo_data)
 	
+	local convert_ammo	-- the new ammo to convert to
     local ammo_type = ammo_data[wpn:get_ammo_type() + 1]
+	
+	-- For non-ArtiGrok users, this will change bad/very bad ammo to normal ammo first
+--	if not arti_ammo_utils then
+		ammo_type = bad_ammo_adjust(ammo_type)
+		convert_ammo = ammo_type
+--	end
 	
 	-- Check if section exists in the ini_ammo_convert
 	if not ini_ammo_convert:section_exist(ammo_type) then return end
 	
-	local convert_ammo	-- the new ammo to convert to
-	
-	local ap_floor = ini_ammo_convert:r_float_ex(ammo_type, "ap_floor") or 0
-	local fmj_ceil = ini_ammo_convert:r_float_ex(ammo_type, "fmj_ceil") or 0
+	local ap_rank = ini_ammo_convert:r_float_ex(ammo_type, "ap_rank") or 0
+	local fmj_rank = ini_ammo_convert:r_float_ex(ammo_type, "fmj_rank") or 0
 	
 	-- Check if they are too high rank to be using FMJ/HP
-	if ap_floor > 0 and rank_enum > ap_floor then
+	if ap_rank > 0 and rank_enum >= ap_rank then
 		convert_ammo = ini_ammo_convert:r_string_ex(ammo_type, "ap_sec")
 	end
 	
 	-- Check if they are too low rank to be using AP (skip if convert ammo was already selected)
-	if fmj_ceil > 0 and rank_enum < fmj_ceil and (not convert_ammo) then
+	if fmj_rank > 0 and rank_enum <= fmj_rank and (not convert_ammo) then
 		-- Edge case: check if it is using PKM ammo (get parent section to cut out scopes)
 		local wpn_sec = ini_sys:r_string_ex(wpn:section(),"parent_section") or wpn:section()
 		if pkm_check[wpn_sec] or ammo_data_inv["ammo_pkm_100"] then
@@ -366,7 +378,7 @@ function try_adjust_ammo(wpn, rank_enum)
 		end
 	end
 	
-    if (convert_ammo and fmj_ceil > 0) or (convert_ammo and ap_floor > 0) and (convert_ammo and ammo_data_inv[convert_ammo]) then
+    if (convert_ammo and ammo_data_inv[convert_ammo]) then
         print_dbg("[AP/FMJ Adjust] Adjusting ammo for weapon %s (%s) from %s to %s | RANK: %s", wpn:section(), wpn:id(), ammo_type, convert_ammo, rank_enum)
         local cnt = wpn:get_ammo_in_magazine()
         wpn:unload_magazine(true)
@@ -377,4 +389,29 @@ end
 
 function on_game_start()
 	RegisterScriptCallback("npc_on_net_spawn", npc_on_net_spawn)
+end
+
+local string_find   = string.find
+local string_gsub   = string.gsub
+
+function bad_ammo_adjust(ammo_sec)
+	-- Replace damaged ammo with new
+	if string_find(ammo_sec,"_verybad") then
+		local new_section = string_gsub(ammo_sec,"_verybad","")
+		if ini_sys:section_exist(new_section) then
+			printf("Very bad ammo was found (%s) ... switching to normal ammo (%s)", ammo_sec, new_section)
+			return new_section
+		end
+	end
+	
+	-- Replace damaged ammo with new
+	if string_find(ammo_sec,"_bad") then
+		local new_section = string_gsub(ammo_sec,"_bad","")
+		if ini_sys:section_exist(new_section) then
+			printf("Bad ammo was found (%s) ... switching to normal ammo (%s)", ammo_sec, new_section)
+			return new_section
+		end
+	end
+	
+	return ammo_sec
 end
