@@ -1,0 +1,13 @@
+; ap_floor - if an NPC's rank is higher than this, swap to AP (used for FMJ and certain HP ammo)
+; ap_sec - what AP ammo to swap the FMJ ammo to
+
+; fmj_ceil - if an NPC's rank is lower than this, swap to FMJ (used for AP, HP untouched)
+; fmj_sec - what FMJ ammo to swap the AP ammo to
+
+; the value of 0 for ap_floor and fmj_ceil will tell the script to ignore the stats
+; respective stats don't have to match rank values - some enemies are okay using FMJ just a bit longer if they already have it
+; Novice = 1 | Trainee = 2 | Experienced = 3 | Professional = 4 | Veteran = 5 | Expert = 6 | Master = 7 | Legend = 8
+
+[ammo_base]
+ap_floor = 0
+fmj_ceil = 0

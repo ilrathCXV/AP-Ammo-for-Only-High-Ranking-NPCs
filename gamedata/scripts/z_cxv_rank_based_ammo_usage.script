@@ -1,0 +1,380 @@
+-- TODO: Exclude important NPCs
+
+local print_console = true
+
+local adjust_npc_tbl = {}
+local ini_ammo_convert = ini_file("rank_ammo\\importer.ltx")
+local npc_rank = ranks.get_obj_rank_name	--(obj by ID)
+local location_name
+
+local function print_dbg(...)
+	if print_console then printf(...) end
+end
+
+map_rank_modifiers = {
+	-- Southern Maps
+	["k00_marsh"] = 0,
+	["l01_escape"] = -1,
+	["l02_garbage"] = -1,
+	["y04_pole"] = -1,
+	["l05_bar"] = 0,
+	["l06_rostok"] = 0,
+	
+	-- Mid-Maps + Darkscape
+	["l03_agroprom"] = 0,
+	["k01_darkscape"] = 0,
+	["l04_darkvalley"] = 0,
+	["k02_trucks_cemetery"] = 0,
+	["l07_military"] = 0,
+	["l09_deadcity"] = 0,
+	["l08_yantar"] = 0,
+	
+	-- Mid-Northern Maps
+	["jupiter"] = 0,
+	["l10_limansk"] = 0,
+	["l10_radar"] = 0,
+	["l10_red_forest"] = 0,
+	
+	-- North Maps
+	["zaton"] = 1,
+	["l11_hospital"] = 1,
+	["pripyat"] = 1,
+	["l11_pripyat"] = 1,
+	
+	-- Most Northern Maps
+	["l13_generators"] = 2,
+	["l12_stancia"] = 1,
+	["l12_stancia_2"] = 1,
+	
+	-- Labs
+	["l03u_agr_underground"] = 0,
+	["l08u_brainlab"] = 0,
+	["l04u_labx18"] = 0,
+	["labx8"] = 0,
+	["l10u_bunker"] = 0,
+	["l12u_control_monolith"] = 2,
+	["l12u_sarcofag"] = 2,
+	["l13u_warlab"] = 2,
+}
+
+-- essentially an enum table to be used - see importer.ltx for logic
+rank_table_rating = {
+	["novice"] = 1,
+	["trainee"] = 2,
+	["experienced"] = 3,
+	["professional"] = 4,
+	["veteran"] = 5,
+	["expert"] = 6,
+	["master"] = 7,
+	["legend"] = 8,
+	
+	-- for anyone trying to use the DLTX mod "Ranks Overhaul"
+	["apprentice"] = 1,
+	["survivor"] = 2,
+	["skilled"] = 3,
+	["zone_elite"] = 7,
+	["zone_legend"] = 8,
+	["zone_mystic"] = 8
+}
+
+-- Endgame factions get a bonus to their rank enum
+faction_rank_adjust = {
+	["monolith"] = 0,
+	["greh"] = 1,
+	["isg"] = 2
+}
+
+-- Special edge case since they only use PKM and x54r AP ammo - will need to check if "ammo_pkm_100" is in their ammo table
+local pkm_check = {
+	["wpn_pkm"] = true,
+	["wpn_pkm_zulus"] = true,
+	["wpn_pkm_siber"] = true,
+	["wpn_pkm_zenit_shorty"] = true,
+	["wpn_pkm_zenit_siber"] = true,
+}
+
+-- Copied from hxf_tough_important_npcs.script
+function Set(t)
+  local s = {}
+  for _,v in pairs(t) do s[v] = true end
+  return s
+end
+
+local IMPORTANT_NPC_SECTIONS = Set {
+
+								--[[ CORDON ]]--
+
+	"esc_2_12_stalker_nimble",									-- Nimble
+	"esc_2_12_stalker_wolf",									-- Wolf
+	"esc_2_12_stalker_fanat",									-- Fanatic
+	"esc_2_12_stalker_trader", 									-- Sidorovich
+	"esc_smart_terrain_5_7_loner_mechanic_stalker", 			-- Xenotech
+	"devushka", 												-- Hip
+	"esc_main_base_trader_mlr",									-- Loris
+	"esc_3_16_military_trader",									-- Major Zhurov
+	"army_south_mechan_mlr",									-- Seryoga
+
+								--[[ GREAT SWAMPS ]]--
+
+	"mar_smart_terrain_doc_doctor",								-- Doctor
+	"mar_smart_terrain_base_stalker_leader_marsh",				-- Cold
+	"mar_base_stalker_tech",									-- Novikov
+	"mar_base_owl_stalker_trader",								-- Spore
+	"mar_smart_terrain_base_doctor",							-- Professor Kalancha
+	"guid_marsh_mlr",											-- Ivan Trodnik
+	"mar_base_stalker_barmen",									-- Librarian
+	
+								--[[ DARKSCAPE ]]--
+	
+	"dasc_tech_mlr",											-- Polymer
+	"dasc_trade_mlr",											-- Cutter
+	"ds_domik_isg_leader",										-- Major Hernandez
+	
+								--[[ GARBAGE ]]--
+	
+	"hunter_gar_trader",										-- Butcher
+	
+								--[[ AGROPROM ]]--
+	
+	"agr_smart_terrain_1_6_near_2_military_colonel_kovalski",	-- Major Kuznetsov
+	"agr_1_6_medic_army_mlr",									-- Rogovets
+	"agr_smart_terrain_1_6_army_trader_stalker",				-- Sergeant Spooner
+	"agr_1_6_barman_army_mlr",									-- Commander
+	"agr_smart_terrain_1_6_army_mechanic_stalker",				-- Lieutenant Kirilov
+	
+								--[[ AGROPROM UNDERGROUND ]]--
+	
+	"agr_u_bandit_boss",										-- Reefer
+
+								--[[ DARK VALLEY ]]--
+	
+	"zat_b7_bandit_boss_sultan",								-- Sultan
+	"val_smart_terrain_7_3_bandit_mechanic_stalker",			-- Limpid
+	"guid_dv_mal_mlr",											-- Pug
+	"val_smart_terrain_7_4_bandit_trader_stalker",				-- Olivius
+	
+								--[[ ROSTOK ]]--
+	
+	"bar_visitors_barman_stalker_trader",						-- Barkeep
+	"bar_visitors_zhorik_stalker_guard2",						-- Zhorik
+	"bar_visitors_garik_stalker_guard",							-- Garik
+	"bar_informator_mlr",										-- Snitch
+	"guid_bar_stalker_navigator",								-- Navigator
+	"bar_arena_manager",										-- Arnie
+	"bar_arena_guard",											-- Liolik
+	"bar_dolg_leader",											-- General Voronin
+	"bar_dolg_general_petrenko_stalker", 						-- Colonel Petrenko
+	"bar_dolg_medic", 											-- Aspirin
+	"bar_visitors_stalker_mechanic",							-- Mangun
+	"bar_zastava_2_commander",									-- Sergeant Kitsenko
+	"bar_duty_security_squad_leader",							-- Captain Gavrilenko
+	
+								--[[ YANTAR ]]--
+	
+	"yan_stalker_sakharov", 									-- Professor Sakharov
+	"mechanic_army_yan_mlr", 									-- Peregrine
+	"yan_povar_army_mlr", 										-- Spirit
+	"yan_ecolog_kruglov",										-- Professor Kruglov
+	
+								--[[ ARMY WAREHOUSES ]]--
+	
+	"mil_smart_terrain_7_7_freedom_leader_stalker", 			-- Lukash
+	"mil_freedom_medic", 										-- Solid
+	"mil_smart_terrain_7_10_freedom_trader_stalker", 			-- Skinflint
+	"mil_smart_terrain_7_7_freedom_mechanic_stalker", 			-- Screw
+	"mil_freedom_guid", 										-- Leshiy
+	"stalker_gatekeeper", 										-- Gatekeeper
+	
+								--[[ DEAD CITY ]]--
+	
+	"cit_killers_merc_mechanic_stalker", 						-- Hog
+	"cit_killers_merc_trader_stalker", 							-- Dushman
+	"ds_killer_guide_main_base", 								-- Leopard
+	"cit_killers_merc_barman_mlr", 								-- Aslan
+	"cit_killers_merc_medic_stalker", 							-- Surgeon
+	
+								--[[ RED FOREST ]]--
+	
+	"red_forester_tech", 										-- Forester
+	"red_greh_trader",											-- Stribog
+	"red_greh_tech",											-- Dazhbog
+	
+								--[[ DESERTED HOSPITAL ]]--
+	
+	"kat_greh_sabaoth", 										-- Chernobog and variants
+	"gen_greh_sabaoth",
+	"sar_greh_sabaoth",
+	
+								--[[ JUPITER ]]--
+	
+	"jup_b220_trapper", 										-- Trapper
+	"jup_a6_stalker_barmen", 									-- Hawaiian
+	"guid_jup_stalker_garik", 									-- Garry
+	"jup_a6_stalker_medik", 									-- Bonesetter
+	"zat_a2_stalker_mechanic", 									-- Cardan
+	"jup_b217_stalker_tech", 									-- Nitro
+	"jup_a6_freedom_trader_ashot", 								-- Ashot
+	"jup_a6_freedom_leader", 									-- Loki
+	"jup_b6_scientist_tech", 									-- Tukarev
+	"jup_b6_scientist_nuclear_physicist", 						-- Professor Hermann
+	"jup_b6_scientist_biochemist", 								-- Professor Ozersky
+	"jup_depo_isg_leader",										-- Major Hernandez
+	"jup_cont_mech_bandit",										-- Nile
+	"jup_cont_trader_bandit",									-- Klenov
+	"jup_depo_isg_tech",										-- Lieutenant Maus
+	
+								--[[ ZATON ]]--
+	
+	"zat_stancia_mech_merc", 									-- Kolin
+	"zat_stancia_trader_merc", 									-- Vector
+	"zat_a2_stalker_nimble", 									-- Nimble
+	"zat_b30_owl_stalker_trader", 								-- Owl
+	"zat_tech_mlr", 											-- Spleen
+	"zat_b22_stalker_medic", 									-- Axel
+	"zat_a2_stalker_barmen", 									-- Beard
+	"zat_b18_noah", 											-- Noah
+	"guid_zan_stalker_locman", 									-- Pilot
+	"zat_b106_stalker_gonta",									-- Gonta
+	"zat_b106_stalker_garmata", 								-- Garmata
+	"zat_b106_stalker_crab", 									-- Crab
+	"army_degtyarev_jup",                                      	-- Colonel Degtyarev and variants
+	"army_degtyarev",
+	"stalker_rogue",											-- Rogue and variants
+	"stalker_rogue_ms",
+	"stalker_rogue_oa",
+	"zat_b7_stalker_victim_1",									-- Spartacus
+	
+								--[[ OUTSKIRTS ]]--
+	
+	"pri_monolith_monolith_trader_stalker", 					-- Krolik
+	"lider_monolith_haron", 									-- Charon
+	"pri_monolith_monolith_mechanic_stalker", 					-- Cleric
+	"monolith_eidolon", 										-- Eidolon
+	"guid_pri_a15_mlr", 										-- Tourist
+	"trader_pri_a15_mlr", 										-- Cashier
+	"pri_medic_stalker", 										-- Yar
+	"merc_pri_a18_mech_mlr", 									-- Trunk
+	"pri_special_trader_mlr", 									-- Meeker
+	"merc_pri_grifon_mlr", 										-- Griffin
+	"mechanic_monolith_kbo", 									-- Bracer
+	"trader_monolith_kbo", 										-- Olivar
+	"stalker_stitch", 											-- Stitch and variants
+	"stalker_stitch_ms",
+	"stalker_stitch_oa",
+	"lost_stalker_strelok", 									-- Strelok and variants
+	"stalker_strelok_hb",
+	"stalker_strelok_oa",
+
+}
+
+function npc_on_net_spawn(npc)
+	if not npc then return end
+
+	if npc:id() and adjust_npc_tbl[npc:id()] then return end
+	
+	-- skip companions to avoid changing their ammo in case player adjusted their ammo types
+	if npc:has_info("npcx_is_companion") then
+		adjust_npc_tbl[npc:id()] = true
+		return
+	end
+	
+	-- skip important NPCs to avoid changing their loadouts (might change to an addition later down the line)
+	if IMPORTANT_NPC_SECTIONS[npc:section()] then
+		adjust_npc_tbl[npc:id()] = true
+		return
+	end
+	
+	local enemy = level.object_by_id(npc:id())
+	if not enemy then return end
+	
+	local rank = npc_rank(enemy)
+	if not rank then return end
+	
+	local rank_enum = rank_table_rating[rank] or 0
+	if rank_enum == 0 then return end
+	
+	if not location_name then
+		location_name = level.name()
+	end
+	
+	local npc_comm = character_community(enemy)
+	
+	-- Monolith in Radar/BS that are not Master/Legend will be read as Experienced
+	-- This will reduce most instances of more dangerous AP ammo from being used
+	-- After BS is turned off, Monolith rank will be read as normal
+	if (rank_enum < 7) and (location_name == "l10_radar" or location_name == "l10u_bunker") and (npc_comm == "monolith") then
+		if (not has_alife_info("bar_deactivate_radar_done")) then
+			rank_enum = math.min(rank_enum, 3)
+		end
+	end
+	
+	-- Sin inside of Miracle Machine **before it is turned off** will read as Trainee/Experienced since it is early game (Grok why...?)
+	-- Sin when doing Mortal Sin will be unaffected
+	if (location_name == "l08u_brainlab") and (npc_comm == "greh") then
+		if (not has_alife_info("yan_labx16_switcher_primary_off")) then
+			rank_enum = math.random(1,2)
+		end
+	end
+		
+	rank_enum = rank_enum + (faction_rank_adjust[npc_comm] or 0) + (map_rank_modifiers[location_name] or 0)
+	
+	print_dbg("[AP/FMJ Adjust] Adjusting ammo for %s (F: %s | R: %s (%s) | FA: %s | LA: %s)", npc and npc:name(), npc_comm, rank, rank_enum, faction_rank_adjust[npc_comm] or 0, map_rank_modifiers[location_name] or 0)
+	
+	CreateTimeEvent("cxv_ammo_type_adjust", npc:id(), 0.05, function()
+		if npc:best_weapon() then
+			try_adjust_ammo(npc:best_weapon(), rank_enum)
+		end
+		npc:iterate_inventory(function(t, item)
+			if IsWeapon(item) then try_adjust_ammo(item, rank_enum) end
+			adjust_npc_tbl[npc:id()] = true
+		end)
+		return true
+	end)
+end
+
+function try_adjust_ammo(wpn, rank_enum)
+	if not wpn then return end
+	if not rank_enum then return end
+	
+    local ammo_data = utils_item.get_ammo(wpn:section(), wpn:id())
+    if is_empty(ammo_data) then return end
+	local ammo_data_inv = invert_table(ammo_data)
+	
+    local ammo_type = ammo_data[wpn:get_ammo_type() + 1]
+	
+	-- Check if section exists in the ini_ammo_convert
+	if not ini_ammo_convert:section_exist(ammo_type) then return end
+	
+	local convert_ammo	-- the new ammo to convert to
+	
+	local ap_floor = ini_ammo_convert:r_float_ex(ammo_type, "ap_floor") or 0
+	local fmj_ceil = ini_ammo_convert:r_float_ex(ammo_type, "fmj_ceil") or 0
+	
+	-- Check if they are too high rank to be using FMJ/HP
+	if ap_floor > 0 and rank_enum > ap_floor then
+		convert_ammo = ini_ammo_convert:r_string_ex(ammo_type, "ap_sec")
+	end
+	
+	-- Check if they are too low rank to be using AP (skip if convert ammo was already selected)
+	if fmj_ceil > 0 and rank_enum < fmj_ceil and (not convert_ammo) then
+		-- Edge case: check if it is using PKM ammo (get parent section to cut out scopes)
+		local wpn_sec = ini_sys:r_string_ex(wpn:section(),"parent_section") or wpn:section()
+		if pkm_check[wpn_sec] or ammo_data_inv["ammo_pkm_100"] then
+			convert_ammo = "ammo_pkm_100"
+		else
+			convert_ammo = ini_ammo_convert:r_string_ex(ammo_type, "fmj_sec")
+		end
+	end
+	
+    if (convert_ammo and fmj_ceil > 0) or (convert_ammo and ap_floor > 0) and (convert_ammo and ammo_data_inv[convert_ammo]) then
+        print_dbg("[AP/FMJ Adjust] Adjusting ammo for weapon %s (%s) from %s to %s | RANK: %s", wpn:section(), wpn:id(), ammo_type, convert_ammo, rank_enum)
+        local cnt = wpn:get_ammo_in_magazine()
+        wpn:unload_magazine(true)
+        wpn:set_ammo_type(ammo_data_inv[convert_ammo] - 1)
+        wpn:set_ammo_elapsed(cnt)
+    end
+end
+
+function on_game_start()
+	RegisterScriptCallback("npc_on_net_spawn", npc_on_net_spawn)
+end

@@ -1,0 +1,57 @@
+; Novice = 1 | Trainee = 2 | Experienced = 3 | Professional = 4 | Veteran = 5 | Expert = 6 | Master = 7 | Legend = 8
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 7.62x54r - 7h14 can either go to 7h1 if too low or AP if too high| AP will go to 7h14
+[ammo_7.62x54_7h1]:ammo_base	;FMJ-
+ap_floor = 5
+ap_sec = ammo_7.62x54_ap
+
+[ammo_7.62x54_7h14]:ammo_base	;FMJ+
+ap_floor = 5
+ap_sec = ammo_7.62x54_ap
+fmj_ceil = 4
+fmj_sec = ammo_7.62x54_7h1
+
+[ammo_7.62x54_ap]:ammo_base
+fmj_ceil = 5
+fmj_sec = ammo_7.62x54_7h1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PKM Ammo - Already a really good caliber, going to lock AP to Master+ (NOTE: search for PKM ammo in script)
+[ammo_pkm_100]
+ap_floor = 6
+ap_sec = ammo_7.62x54_ap
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 7.62x51 NATO
+[ammo_7.62x51_fmj]:ammo_base
+ap_floor = 5
+ap_sec = ammo_7.62x51_ap
+
+[ammo_7.62x51_ap]:ammo_base
+fmj_ceil = 6
+fmj_sec = ammo_7.62x51_fmj
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 7.92x33 Mauser - Low AP floor since it is so lackluster
+[ammo_7.92x33_fmj]:ammo_base
+ap_floor = 4
+ap_sec = ammo_7.92x33_ap
+
+[ammo_7.92x33_ap]
+fmj_ceil = 5
+fmj_sec = ammo_7.92x33_fmj
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 12.7x55
+[ammo_12.7x55_fmj]:ammo_base
+ap_floor = 5
+ap_sec = ammo_12.7x55_ap
+
+[ammo_12.7x55_ap]
+fmj_ceil = 6
+fmj_sec = ammo_12.7x55_fmj
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; .338 Lapua
+[ammo_magnum_300]:ammo_base
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; .338 Federal
+[ammo_338_federal]:ammo_base
+
+
+
+
