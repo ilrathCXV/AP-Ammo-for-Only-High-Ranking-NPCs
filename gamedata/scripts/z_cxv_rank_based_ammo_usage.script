@@ -322,6 +322,11 @@ function npc_on_net_spawn(npc)
 			rank_enum = math.random(1,2)
 		end
 	end
+	
+	-- If Brain Scorcher is turned off, if a map modifier is less than 0, up it by 1
+	if map_rank_modifiers[location_name] and map_rank_modifiers[location_name] < 0 and has_alife_info("bar_deactivate_radar_done") then
+		map_rank_modifiers[location_name] = map_rank_modifiers[location_name] + 1
+	end
 		
 	rank_enum = rank_enum + (faction_rank_adjust[npc_comm] or 0) + (map_rank_modifiers[location_name] or 0)
 	
