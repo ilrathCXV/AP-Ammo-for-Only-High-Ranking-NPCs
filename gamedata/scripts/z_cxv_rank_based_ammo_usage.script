@@ -79,6 +79,7 @@ rank_table_rating = {
 
 -- Certai factions get a bonus/penalty to their rank enum
 faction_rank_adjust = {
+	["zombied"] = -2,
 	["zombified"] = -2,
 	["bandit"] = -1,
 	["monolith"] = 0,
@@ -302,7 +303,7 @@ function npc_on_net_spawn(npc)
 	local npc_comm = character_community(enemy)
 	
 	-- Bandits will only receive negative rank modifier if not in Dark Valley
-	if (location_name = "l04_darkvalley") then
+	if (location_name == "l04_darkvalley") then
 		faction_rank_adjust["bandit"] = 0
 	end
 	
