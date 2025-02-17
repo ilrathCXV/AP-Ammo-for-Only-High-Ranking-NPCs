@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<string_table>
+	<string id="ui_mcm_menu_rank_based_ammo">
+		<text>Rank-Based Ammo Usage</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_title">
+		<text>Rank-Based Ammo (or No More AP for Trainees)</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_enabled">
+		<text>Enabled?</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_enabled_desc">
+		<text>
+			When enabled, this will allow the base functionality of the mod and all options below this to work - adjusting ammo based on an NPC's rank, location, and faction, etc.\n
+			\nDisabling this will turn off this mod and all options below it, allowing ammo used to be fully controlled by the loadouts like usual.\n
+			\n%c[d_red]REQUIRES RELOADING A SAVE OR ENTERING A NEW AREA IN ORDER FOR CHANGES TO TAKE EFFECT!!!
+		</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_nerf_bs">
+		<text>Nerf Monolith in Radar before Brain Scorcher is disabled?</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_nerf_bs_desc">
+		<text>
+			When enabled, this will make Monolith found in Radar and in the Brain Scorcher BEFORE turning it off slightly easier. Only Masters and Legends will recieve AP ammo. All others will use FMJ.\n
+			\nDisabling this will not nerf Monolith in Radar before the Scorcher is disabled, leaving them to follow the normal rank logic.
+		</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_nerf_mm">
+		<text>Nerf Sin in Miracle Machine before it is disabled?</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_nerf_mm_desc">
+		<text>
+			When enabled, this will make Sin found in the Miracle Machine BEFORE turning it off slightly easier. They will only use FMJ ammo. This DOES NOT affect Sin during "Mortal Sin".\n
+			\nDisabling this will not nerf Sin in the Miracle Machine before it is disabled, leaving them to follow the normal rank logic.
+		</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_buff_south_after_bs">
+		<text>Buff weaker South areas after Brain Scorcher is disabled?</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_buff_south_after_bs_desc">
+		<text>
+			When enabled, this will make all NPCs found in the weaker South AFTER turning off the Brain Scorcher slightly less easier. Any South maps that have a negative location modifier will have it reduced by one to slightly allow more AP usage while still having less than middle or North maps.\n
+			\nDisabling this will leave the South maps' negative location modifiers the same even after the Scorcher is disabled.\n
+			\n%c[yellow]Affected maps: Great Swamps, Cordon, Garbage, Darkscape, Meadow
+		</text>
+	</string>
+	
+	<string id="ui_mcm_rank_based_ammo_adjust_ammo_loot">
+		<text>Adjust NPC ammo loot?</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_adjust_ammo_loot_desc">
+		<text>
+			When enabled, this will adjust the loot on bodies to match the ammo actually used by the NPCs.\n
+			\nDisabling this will leave the ammo loot to picked randomly from the NPC's weapon's ammo list.
+		</text>
+	</string>	
+	<string id="ui_mcm_rank_based_ammo_print_debug">
+		<text>Print Debug to log?</text>
+	</string>
+	<string id="ui_mcm_rank_based_ammo_print_debug_desc">
+		<text>Controls whether to print useful debug information or not.</text>
+	</string>
+	
+</string_table>

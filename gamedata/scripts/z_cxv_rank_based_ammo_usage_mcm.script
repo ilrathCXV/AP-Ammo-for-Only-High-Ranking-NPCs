@@ -1,0 +1,27 @@
+local defaults = {
+	["enabled"] = true,
+	["nerf_bs"] = true,
+	["nerf_mm"] = true,
+	["buff_south_after_bs"] = false,
+	["adjust_ammo_loot"] = false,
+	["print_debug"] = false,
+}
+
+function get_config(key)
+    if ui_mcm then return ui_mcm.get("rank_based_ammo/"..key) else return defaults[key] end
+end
+
+function on_mcm_load()
+	local options = {
+		id = "rank_based_ammo", sh = true, gr = {
+			{ id = "title", type = "slide", link = "ui_options_slider_player", text = "ui_mcm_rank_based_ammo_title", size = { 512, 50 }, spacing = 20 },
+			{id = "enabled", type = "check", val = 1, def=true},
+            {id = "nerf_bs", type = "check", val = 1, def=true},
+            {id = "nerf_mm", type = "check", val = 1, def=true},
+			{id = "buff_south_after_bs", type = "check", val = 1, def=false},
+			{id = "adjust_ammo_loot", type = "check", val = 1, def=false},
+            {id = "print_debug", type = "check", val = 1, def=false},
+		}
+	}
+	return options
+end
