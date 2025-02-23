@@ -1,40 +1,48 @@
 ; Novice = 1 | Trainee = 2 | Experienced = 3 | Professional = 4 | Veteran = 5 | Expert = 6 | Master = 7 | Legend = 8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 5.45x39
 [ammo_5.45x39_fmj]:ammo_base
-ap_rank = 5
+ap_rank = 6
 ap_sec = ammo_5.45x39_ap
+fmj_rank = 2
+fmj_sec = ammo_5.45x39_ep
 
-[ammo_5.45x39_ep]:ammo_5.45x39_fmj	;HP
+[ammo_5.45x39_ep]:ammo_base
+ap_rank = 3
+ap_sec = ammo_5.45x39_fmj
 
 [ammo_5.45x39_ap]:ammo_base
-fmj_rank = 4
+fmj_rank = 5
 fmj_sec = ammo_5.45x39_fmj
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 5.56x45
 [ammo_5.56x45_fmj]:ammo_base
-ap_rank = 5
+ap_rank = 6
 ap_sec = ammo_5.56x45_ap
+fmj_rank = 2
+fmj_sec = ammo_5.56x45_ss190
 
-[ammo_5.56x45_ss190]:ammo_5.56x45_fmj ;HP
+[ammo_5.56x45_ss190]:ammo_base ;HP
+ap_rank = 3
+ap_sec = ammo_5.56x45_fmj
 
 [ammo_5.56x45_ap]:ammo_base
-fmj_rank = 4
+fmj_rank = 5
 fmj_sec = ammo_5.56x45_fmj
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 7.62x39
 [ammo_7.62x39_fmj]:ammo_base
-ap_rank = 5
+ap_rank = 6
 ap_sec = ammo_7.62x39_ap
 
 [ammo_7.62x39_ap]:ammo_base
-fmj_rank = 4
+fmj_rank = 5
 fmj_sec = ammo_7.62x39_fmj
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 9x39
 [ammo_9x39_pab9]:ammo_base	;FMJ
-ap_rank = 5
+ap_rank = 6
 ap_sec = ammo_9x39_ap
 
 [ammo_9x39_ap]:ammo_base
-fmj_rank = 3
+fmj_rank = 5
 fmj_sec = ammo_9x39_pab9

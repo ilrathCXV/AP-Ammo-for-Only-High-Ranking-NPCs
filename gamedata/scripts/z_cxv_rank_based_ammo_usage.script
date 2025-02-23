@@ -20,16 +20,16 @@ map_rank_modifiers = {
 	["l01_escape"] = -2,
 	["l02_garbage"] = -2,
 	["y04_pole"] = -2,
-	["l05_bar"] = 0,
-	["l06_rostok"] = 0,
+	["l05_bar"] = -1,
+	["l06_rostok"] = -1,
 	
 	-- Mid-Maps + Darkscape
-	["l03_agroprom"] = 0,
+	["l03_agroprom"] = -1,
 	["k01_darkscape"] = -1,
-	["l04_darkvalley"] = 0,
-	["k02_trucks_cemetery"] = 0,
-	["l07_military"] = 0,
-	["l09_deadcity"] = 0,
+	["l04_darkvalley"] = -1,
+	["k02_trucks_cemetery"] = -1,
+	["l07_military"] = -1,
+	["l09_deadcity"] = -1,
 	["l08_yantar"] = -1,
 	
 	-- Mid-Northern Maps
@@ -58,6 +58,17 @@ map_rank_modifiers = {
 	["l12u_control_monolith"] = 2,
 	["l12u_sarcofag"] = 2,
 	["l13u_warlab"] = 2,
+}
+
+local map_faction_exemptions = {
+	["k00_marsh"] = "csky",
+	["l05_bar"] = "dolg",
+	["l06_rostok"] = "dolg",
+	["l03_agroprom"] = "army",
+	["l04_darkvalley"] = "bandit",
+	["l07_military"] = "freedom",
+	["l09_deadcity"] = "killer",
+	["l08_yantar"] = "ecologist",
 }
 
 -- essentially an enum table to be used - see importer.ltx for logic
@@ -228,6 +239,8 @@ local IMPORTANT_NPC_SECTIONS = Set {
 	"jup_cont_mech_bandit",										-- Nile
 	"jup_cont_trader_bandit",									-- Klenov
 	"jup_depo_isg_tech",										-- Lieutenant Maus
+	"jup_a12_bandit_cashier",									-- Bandit Trader
+	"jup_a12_bandit_guard",									-- Bandit Trader
 	
 								--[[ ZATON ]]--
 	
@@ -273,6 +286,8 @@ local IMPORTANT_NPC_SECTIONS = Set {
 
 }
 
+local map_location_buffed = {}
+
 function npc_on_net_spawn(npc)
 
 	if not enable_mod then return end
@@ -307,11 +322,6 @@ function npc_on_net_spawn(npc)
 	
 	local npc_comm = character_community(enemy)
 	
-	-- Bandits will only receive negative rank modifier if not in Dark Valley
-	if (location_name == "l04_darkvalley") then
-		faction_rank_adjust["bandit"] = 0
-	end
-	
 	-- Monolith in Radar/BS that are not Master/Legend will be read as Experienced
 	-- This will reduce most instances of more dangerous AP ammo from being used
 	-- After BS is turned off, Monolith rank will be read as normal
@@ -321,24 +331,33 @@ function npc_on_net_spawn(npc)
 		end
 	end
 	
-	-- Sin inside of Miracle Machine **before it is turned off** will read as Trainee/Experienced since it is early game (Grok why...?)
+	-- Sin inside of Miracle Machine **before it is turned off** will read as Trainee/Experienced/Professional since it is early game (Grok why...?)
 	-- Sin when doing Mortal Sin will be unaffected
 	if nerf_mm and (location_name == "l08u_brainlab") and (npc_comm == "greh") then
 		if (not has_alife_info("yan_labx16_switcher_primary_off")) then
-			rank_enum = math.random(1,2)
+			rank_enum = math.random(1,3)
 		end
 	end
 	
 	-- If Brain Scorcher is turned off, if a map modifier is less than 0, up it by 1
-	if buff_south_after_bs and map_rank_modifiers[location_name] and map_rank_modifiers[location_name] < 0 and has_alife_info("bar_deactivate_radar_done") then
-		map_rank_modifiers[location_name] = map_rank_modifiers[location_name] + 1
+	if buff_south_after_bs and (not map_location_buffed[location_name]) then
+		if map_rank_modifiers[location_name] and map_rank_modifiers[location_name] < 0 and has_alife_info("bar_deactivate_radar_done") then
+			map_rank_modifiers[location_name] = map_rank_modifiers[location_name] + 1
+			map_location_buffed[location_name] = true
+		end
 	end
-		
-	rank_enum = rank_enum + (faction_rank_adjust[npc_comm] or 0) + (map_rank_modifiers[location_name] or 0)
 	
-	print_dbg("[AP/FMJ Adjust] Adjusting ammo for %s (F: %s | R: %s (%s) | FA: %s | LA: %s)", npc and npc:name(), npc_comm, rank, rank_enum, faction_rank_adjust[npc_comm] or 0, map_rank_modifiers[location_name] or 0)
+	-- Ignore map negations if faction base is located in the map table
+	if map_faction_exemptions[location_name] and (map_faction_exemptions[location_name] == npc_comm) and (map_rank_modifiers[location_name] < 0) then
+		rank_enum = rank_enum + (faction_rank_adjust[npc_comm] or 0)
+	else
+		rank_enum = rank_enum + (faction_rank_adjust[npc_comm] or 0) + (map_rank_modifiers[location_name] or 0)
+	end
 	
-	CreateTimeEvent("cxv_ammo_type_adjust", npc:id(), 0.05, function()
+	print_dbg("[Ammo Adjust] Adjusting for %s (Faction: %s | Rank: %s | Adj. Enum: %s | Faction Adj.: %s | Level Adj.: %s (%s))", npc and npc:name(), npc_comm, rank, rank_enum, faction_rank_adjust[npc_comm] or 0,
+								map_rank_modifiers[location_name] or 0, (map_faction_exemptions[location_name] and map_faction_exemptions[location_name] == npc_comm))
+	
+	CreateTimeEvent("cxv_ammo_type_adjust", npc:id(), 0.03, function()
 		if npc:best_weapon() then
 			try_adjust_ammo(npc:best_weapon(), rank_enum)
 		end
@@ -354,21 +373,27 @@ function try_adjust_ammo(wpn, rank_enum)
 	if not wpn then return end
 	if not rank_enum then return end
 	
+	local loop_count = 0
+	
+	local wpn_sec = ini_sys:r_string_ex(wpn:section(),"parent_section") or wpn:section()
     local ammo_data = utils_item.get_ammo(wpn:section(), wpn:id())
     if is_empty(ammo_data) then return end
 	local ammo_data_inv = invert_table(ammo_data)
 	
 	local convert_ammo	-- the new ammo to convert to
     local ammo_type = ammo_data[wpn:get_ammo_type() + 1]
+	local orig_type = ammo_type
 	
 	ammo_type = bad_ammo_adjust(ammo_type)
-	convert_ammo = ammo_type
 	
 	-- Check if section exists in the ini_ammo_convert
 	if not ini_ammo_convert:section_exist(ammo_type) then return end
 	
-	local ap_rank = ini_ammo_convert:r_float_ex(ammo_type, "ap_rank") or 0
-	local fmj_rank = ini_ammo_convert:r_float_ex(ammo_type, "fmj_rank") or 0
+	::ammo_recheck::
+--	print_dbg("[Ammo Adjust] Loop check: %s", loop_count)
+	
+	local ap_rank = ini_ammo_convert:r_float_ex(ammo_type, "ap_rank", 0) or 0
+	local fmj_rank = ini_ammo_convert:r_float_ex(ammo_type, "fmj_rank", 0) or 0
 	
 	-- Check if they are too high rank to be using FMJ/HP
 	if ap_rank > 0 and rank_enum >= ap_rank then
@@ -376,9 +401,8 @@ function try_adjust_ammo(wpn, rank_enum)
 	end
 	
 	-- Check if they are too low rank to be using AP (skip if convert ammo was already selected)
-	if fmj_rank > 0 and rank_enum <= fmj_rank and (not convert_ammo) then
+	if fmj_rank > 0 and rank_enum <= fmj_rank then
 		-- Edge case: check if it is using PKM ammo (get parent section to cut out scopes)
-		local wpn_sec = ini_sys:r_string_ex(wpn:section(),"parent_section") or wpn:section()
 		if pkm_check[wpn_sec] or ammo_data_inv["ammo_pkm_100"] then
 			convert_ammo = "ammo_pkm_100"
 		else
@@ -386,8 +410,19 @@ function try_adjust_ammo(wpn, rank_enum)
 		end
 	end
 	
-    if (convert_ammo and convert_ammo ~= ammo_type and ammo_data_inv[convert_ammo]) then
-        print_dbg("[AP/FMJ Adjust] Adjusting ammo for weapon %s (%s) from %s to %s | RANK: %s", wpn:section(), wpn:id(), ammo_type, convert_ammo, rank_enum)
+	-- Try one more round of converting to see if we need to adjust again
+	if (convert_ammo and convert_ammo ~= ammo_type) and loop_count < 2 then
+		loop_count = loop_count + 1
+		ammo_type = convert_ammo
+		goto ammo_recheck
+	end
+	
+	if (not convert_ammo) and (ammo_type ~= orig_type) then
+		convert_ammo = ammo_type
+	end
+	
+    if (convert_ammo and ammo_data_inv[convert_ammo]) then
+        print_dbg("[Ammo Adjust] Adjusting ammo for %s (%s) from %s to %s | RANK: %s", wpn:section(), wpn:id(), orig_type, convert_ammo, rank_enum)
         local cnt = wpn:get_ammo_in_magazine()
         wpn:unload_magazine(true)
         wpn:set_ammo_type(ammo_data_inv[convert_ammo] - 1)
@@ -403,7 +438,7 @@ function bad_ammo_adjust(ammo_sec)
 	if string_find(ammo_sec,"_verybad") then
 		local new_section = string_gsub(ammo_sec,"_verybad","")
 		if ini_sys:section_exist(new_section) then
-			print_dbg("Very bad ammo was found (%s) ... switching to normal ammo (%s)", ammo_sec, new_section)
+			print_dbg("[Ammo Adjust] Very bad ammo was found (%s) ... switching to normal ammo (%s)", ammo_sec, new_section)
 			return new_section
 		end
 	end
@@ -412,7 +447,7 @@ function bad_ammo_adjust(ammo_sec)
 	if string_find(ammo_sec,"_bad") then
 		local new_section = string_gsub(ammo_sec,"_bad","")
 		if ini_sys:section_exist(new_section) then
-			print_dbg("Bad ammo was found (%s) ... switching to normal ammo (%s)", ammo_sec, new_section)
+			print_dbg("[Ammo Adjust] Bad ammo was found (%s) ... switching to normal ammo (%s)", ammo_sec, new_section)
 			return new_section
 		end
 	end
