@@ -610,7 +610,8 @@ function death_manager.set_weapon_drop_condition(npc,itm)
 			if (sec and death_manager.item_count[sec]) then 
 				number = math.random(death_manager.item_count[sec][1],death_manager. item_count[sec][2])
 				if (number > 0 and ini_sys:section_exist(sec)) then
-					BaseDMCreate(sec, npc, {ammo = number})
+--					BaseDMCreate(sec, npc, {ammo = number})
+					BaseDMCreate(sec, npc, {ammo = number * ui_mcm.get('dph_loot_cond/ammo/factor')})
 				end
 			end
 		end
@@ -621,8 +622,11 @@ function death_manager.set_weapon_drop_condition(npc,itm)
 				sec = ammo_class[i]
 				if (sec and death_manager.item_count[sec]) then 
 					number = math.random(death_manager.item_count[sec][1], death_manager.item_count[sec][2])
-					if (number > 0 and ini_sys:section_exist(sec)) then 
-						BaseDMCreate(sec, npc, {ammo = number})
+					if (number > 0 and ini_sys:section_exist(sec)) then
+						chance = math.random(0,100)
+						if chance > 10 then
+							BaseDMCreate(sec, npc, {ammo = number})
+						end
 					end
 				end
 			end
