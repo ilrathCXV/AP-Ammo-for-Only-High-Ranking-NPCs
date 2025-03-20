@@ -528,7 +528,7 @@ function death_manager.try_spawn_ammo(npc)
 							chance = math.random(0,100)
 							if chance > 30 then
 								local loot_factor = (ui.mcm and ui_mcm.get('dph_loot_cond/ammo/factor')) or 1
-								BaseDMCreate(sec, npc, {ammo = number * loot_factor)})
+								BaseDMCreate(sec, npc, {ammo = (number * loot_factor)})
 							end
 							-- DPH_LOOT_COND
 						end
@@ -643,7 +643,7 @@ if magazines then
 	end
 	
 	BaseNPCDeath = magazines_loot.npc_on_death
-	print_dbg('[MagsRankAmmo] Is Function Available? (%s)', BaseNPCDeathItr)
+--	print_dbg('[MagsRankAmmo] Is Function Available? (%s)', BaseNPCDeath)
 	if BaseNPCDeath then
 		function magazines_loot.npc_on_death(npc, who)
 			local rank = ranks.get_obj_rank_name(npc)
