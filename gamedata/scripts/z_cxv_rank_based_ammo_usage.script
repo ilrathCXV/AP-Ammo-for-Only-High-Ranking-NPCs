@@ -527,7 +527,7 @@ function death_manager.try_spawn_ammo(npc)
 							end
 							chance = math.random(0,100)
 							if chance > 30 then
-								local loot_factor = (ui.mcm and ui_mcm.get('dph_loot_cond/ammo/factor')) or 1
+								local loot_factor = (ui_mcm and ui_mcm.get('dph_loot_cond/ammo/factor')) or 1
 								BaseDMCreate(sec, npc, {ammo = (number * loot_factor)})
 							end
 							-- DPH_LOOT_COND
@@ -607,7 +607,7 @@ function death_manager.set_weapon_drop_condition(npc,itm)
 				number = math.random(death_manager.item_count[sec][1],death_manager. item_count[sec][2])
 				if (number > 0 and ini_sys:section_exist(sec)) then
 --					BaseDMCreate(sec, npc, {ammo = number})
-					local loot_factor = (ui.mcm and ui_mcm.get('dph_loot_cond/ammo/factor')) or 1
+					local loot_factor = (ui_mcm and ui_mcm.get('dph_loot_cond/ammo/factor')) or 1
 					BaseDMCreate(sec, npc, {ammo = number * loot_factor})
 				end
 			end
