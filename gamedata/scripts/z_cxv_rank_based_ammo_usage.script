@@ -435,8 +435,16 @@ function try_adjust_ammo(wpn, rank_enum)
 			if mag_data then
 				if #mag_data.loaded > 0 then
 					local ammo_cap = SYS_GetParam(2, mag_data["section"], "max_mag_size")
+					
+					-- do this one more time in case something goes awry
+					convert_ammo = bad_ammo_adjust(convert_ammo) or convert_ammo
+					
 					for i=1, ammo_cap do
-						mag_data["loaded"][i] = convert_ammo
+						-- Apparently, enemy weapons are already given random amounts of ammo in the magazine for looting purposes
+						-- So, we have to do a validity check here to ensure we don't get magazines full of ammo when looting
+						if mag_data["loaded"][i] then
+							mag_data["loaded"][i] = convert_ammo
+						end
 					end
 					
 					magazine_binder.set_data(wpn:id(), mag_data)
@@ -551,24 +559,8 @@ local setting_wpn = false
 BaseDeathWpnCond = death_manager.set_weapon_drop_condition
 function death_manager.set_weapon_drop_condition(npc,itm)
 	
-	if magazines then
-		if (not enable_mod) and (not adjust_ammo_loot) then
-			BaseDeathWpnCond(npc,itm)
-			return
-		elseif itm and enable_mod and adjust_ammo_loot then
-			-- avoid creating ammo on reload
-			local death_dropped = se_load_var(npc:id(), npc:name(), "death_dropped")
-			if not (death_dropped) and (IsWeapon(nil,itm:clsid()) and not npc:marked_dropped(itm)) then
-				setting_wpn = true
-				cond_item = itm
-			end
-			
-			BaseDeathWpnCond(npc,itm)
-			setting_wpn = true
-			cond_item = nil
-			return
-		end
-	end
+	-- ensure to reset the variable to avoid incorrect ammo in the magazines (Mags users)
+	cond_item = nil
 	
 	if (not enable_mod) and (not adjust_ammo_loot) then
 		BaseDeathWpnCond(npc,itm)
@@ -595,7 +587,30 @@ function death_manager.set_weapon_drop_condition(npc,itm)
 	end
 	
 	if (IsWeapon(nil,itm:clsid()) and not npc:marked_dropped(itm)) then
-		--
+		-- Mags users need this to adjust the enemy magazines
+		if magazines then
+			-- This variable will allow us to get the correct ammo type when determining ammo to put in the magazine when looting
+			local id = itm:id()
+			if not magazine_binder.is_supported_weapon(itm) then
+				magazine_binder.set_data(id, nil)
+				return
+			end
+		
+			if (magazine_binder.is_supported_weapon(itm) and not npc:marked_dropped(itm)) then
+				cond_item = itm
+				local id = itm:id()
+				local sec = itm:section()
+				local mag_sec = magazine_binder.weapon_default_magazine(sec)
+				local ammo_table = magazine_binder.get_magazine_caliber(mag_sec)
+				local rank = ranks.get_obj_rank_name(npc)
+				print_dbg("Resetting mag data for weapon %s (%s)", id, itm:section())
+				itm:unload_magazine()
+				magazines_loot.random_pop_mag(id, mag_sec, ammo_table, rank)
+				magazines.prep_weapon(itm, false)
+			end
+		end
+		
+		-- Loose ammo loot generation for all users
 		local sec,number
 		local ammo_class = parse_list(ini_sys,itm:section(),"ammo_class")
 		
@@ -629,11 +644,11 @@ function death_manager.set_weapon_drop_condition(npc,itm)
 			end
 		end
 		
-		itm:set_ammo_elapsed(0)	
+		itm:set_ammo_elapsed(0)
 	end
 end
 
-
+-- Essentially need to copy all of the Mags' "npc_on_death" function to fully be able to adjust the ammo
 if magazines then
 	local ini_loadouts = ini_file("items\\settings\\npc_mag_loadouts.ltx")
 	-- death management
@@ -649,11 +664,15 @@ if magazines then
 			local rank = ranks.get_obj_rank_name(npc)
 			local found_primary = false
 			local found_secondary = false
+			
 			function itr_inv(temp, item)
 				local sec = item:section()
+				
+				-- ensure to reset the variable to avoid incorrect ammo in the magazines
+				weapon_item = nil
 				if IsWeapon(nil,item:clsid()) and not npc:marked_dropped(item) and magazine_binder.is_supported_weapon(item) then
 					-- spawn mags for one primary, one secondary
-					npc_death = true
+					-- This variable will allow us to get the correct ammo type when determining ammo to put in the magazine when looting
 					weapon_item = item
 					local is_sidearm = IsPistol(item)
 					if (found_primary and not is_sidearm) or (found_secondary and is_sidearm) then return end
@@ -679,8 +698,9 @@ if magazines then
 							magazines_loot.random_pop_mag(new_mag.id, to_create, ammo_table, rank)
 						end
 					end
+					
+					-- reset variable as we don't want any issues with other weapon mag loot generation
 					weapon_item = nil
-					npc_death = false
 					if is_sidearm then
 						found_secondary = true
 					else
@@ -692,17 +712,22 @@ if magazines then
 		end
 	end
 	
+	-- We now use the variable/weapon to get the current ammo in the weapon and have that be the ammo in the looted magazines
+	-- This gets called via "random_pop_mag" for looting purposes
 	BaseMagsDetermineAmmo = magazines_loot.determine_ammo
 	if BaseMagsDetermineAmmo then
 		function magazines_loot.determine_ammo(ammo_to_pick, mag_sec, rank)
-			if (weapon_item and npc_death) then
+			-- npc_on_death ammo generation
+			if (weapon_item) then
 				ammo_class = utils_item.get_ammo(weapon_item:section(), weapon_item:id())
 				-- change section to the correct ammo type
 				if ammo_class and (#ammo_class > 0) then
 					ammo_to_pick = ammo_class[weapon_item:get_ammo_type() + 1]
 					print_dbg("[Mags Determine Ammo] Ammo to be given: %s", ammo_to_pick)
 				end
-			elseif (cond_item and setting_wpn) then
+				
+			-- set_weapon_drop_condition ammo generation
+			elseif (cond_item) then
 				ammo_class = utils_item.get_ammo(cond_item:section(), cond_item:id())
 				-- change section to the correct ammo type
 				if ammo_class and (#ammo_class > 0) then
@@ -711,7 +736,10 @@ if magazines then
 				end
 			end
 			
-			return BaseMagsDetermineAmmo(ammo_to_pick, mag_sec, rank)
+--			ammo_to_pick = bad_ammo_adjust(ammo_to_pick) or ammo_to_pick
+			
+			-- return BaseMagsDetermineAmmo(ammo_to_pick, mag_sec, rank)
+			return ammo_to_pick
 		end
 	end
 end
