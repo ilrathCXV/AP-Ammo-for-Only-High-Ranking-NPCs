@@ -295,9 +295,10 @@ function npc_on_net_spawn(npc)
 
 	if npc:id() and adjust_npc_tbl[npc:id()] then return end
 	
+	if not npc:alive() then return end
+	
 	-- skip companions to avoid changing their ammo in case player adjusted their ammo types
 	if npc:has_info("npcx_is_companion") then
-		adjust_npc_tbl[npc:id()] = true
 		return
 	end
 	
@@ -325,9 +326,14 @@ function npc_on_net_spawn(npc)
 	-- Monolith in Radar/BS that are not Master/Legend will be read as Experienced
 	-- This will reduce most instances of more dangerous AP ammo from being used
 	-- After BS is turned off, Monolith rank will be read as normal
-	if nerf_bs and (rank_enum < 7) and (location_name == "l10_radar" or location_name == "l10u_bunker") and (npc_comm == "monolith") then
-		if (not has_alife_info("bar_deactivate_radar_done")) then
-			rank_enum = math.min(rank_enum, 3)
+	-- Monolith will receive a +1 during Barrier Defense
+	if (npc_comm == "monolith") then
+		if nerf_bs and (rank_enum < 7) and (location_name == "l10_radar" or location_name == "l10u_bunker") then
+			if (not has_alife_info("bar_deactivate_radar_done")) then
+				rank_enum = math.min(rank_enum, 3)
+			end
+		elseif (location_name == "l07_military") and axr_task_manager.ongoing_tasks['barrier_defense_monolith'] then 
+			rank_enum = rank_enum + 1
 		end
 	end
 	
@@ -347,6 +353,11 @@ function npc_on_net_spawn(npc)
 		end
 	end
 	
+	-- Give Zombified a +1 boost when it comes to Barrier Defense
+	if (npc_comm == "zombied" or npc_comm == "zombified") and (location_name == "l07_military") and axr_task_manager.ongoing_tasks['barrier_defense_zombie'] then
+		rank_enum = rank_enum + 1
+	end
+	
 	-- Ignore map negations if faction base is located in the map table
 	if map_faction_exemptions[location_name] and (map_faction_exemptions[location_name] == npc_comm) and (map_rank_modifiers[location_name] < 0) then
 		rank_enum = rank_enum + (faction_rank_adjust[npc_comm] or 0)
@@ -359,12 +370,12 @@ function npc_on_net_spawn(npc)
 	
 	adjust_npc_tbl[npc:id()] = true
 	
-	CreateTimeEvent("cxv_ammo_type_adjust", npc:id(), 0.03, function()
+	CreateTimeEvent("cxv_ammo_type_adjust", npc:id(), 0.01, function()
 		if npc:best_weapon() then
 			try_adjust_ammo(npc:best_weapon(), rank_enum)
 		end
 		npc:iterate_inventory(function(t, item)
-			if IsWeapon(item) then try_adjust_ammo(item, rank_enum) end
+			if (IsWeapon(item) and (not IsItem("fake_ammo_wpn",item:section()))) then try_adjust_ammo(item, rank_enum) end
 		end)
 		return true
 	end)
@@ -550,17 +561,17 @@ function death_manager.try_spawn_ammo(npc)
 	CreateTimeEvent(npc:id(), "npc_ammo_aggregation", 0, item_weapon.ammo_aggregation_full, npc:id())
 end
 
-local weapon_item = nil
+local weapon_item_id = nil
 local npc_death = false
 
-local cond_item = nil
+local cond_item_id = nil
 local setting_wpn = false
 
 BaseDeathWpnCond = death_manager.set_weapon_drop_condition
 function death_manager.set_weapon_drop_condition(npc,itm)
 	
 	-- ensure to reset the variable to avoid incorrect ammo in the magazines (Mags users)
-	cond_item = nil
+	cond_item_id = nil
 	
 	if (not enable_mod) and (not adjust_ammo_loot) then
 		BaseDeathWpnCond(npc,itm)
@@ -574,6 +585,21 @@ function death_manager.set_weapon_drop_condition(npc,itm)
 	else
 		condition = math.random( death_manager.weapon_drop_condition["novice"][1] , death_manager.weapon_drop_condition["novice"][2] )
 	end
+	
+	-- DPH_LOOT_COND
+	local ckey = rank
+
+	if npc:character_community() == "zombied" then
+		ckey = 'zombied'
+	end
+
+	local min_cond = ui_mcm.get('dph_loot_cond/weapon/' .. ckey .. '_min')
+	local max_cond = ui_mcm.get('dph_loot_cond/weapon/' .. ckey .. '_max')
+	
+	if min_cond and max_cond then
+		condition = math.random(min_cond, max_cond)
+	end
+	-- DPH_LOOT_COND END
 	
 	condition = clamp(condition,5,100)
 	condition = condition / 100
@@ -597,8 +623,8 @@ function death_manager.set_weapon_drop_condition(npc,itm)
 			end
 		
 			if (magazine_binder.is_supported_weapon(itm) and not npc:marked_dropped(itm)) then
-				cond_item = itm
 				local id = itm:id()
+				cond_item_id = id
 				local sec = itm:section()
 				local mag_sec = magazine_binder.weapon_default_magazine(sec)
 				local ammo_table = magazine_binder.get_magazine_caliber(mag_sec)
@@ -669,18 +695,18 @@ if magazines then
 				local sec = item:section()
 				
 				-- ensure to reset the variable to avoid incorrect ammo in the magazines
-				weapon_item = nil
+				weapon_item_id = nil
 				if IsWeapon(nil,item:clsid()) and not npc:marked_dropped(item) and magazine_binder.is_supported_weapon(item) then
 					-- spawn mags for one primary, one secondary
 					-- This variable will allow us to get the correct ammo type when determining ammo to put in the magazine when looting
-					weapon_item = item
+					
+					local id = item:id()
+					weapon_item_id = id
 					local is_sidearm = IsPistol(item)
 					if (found_primary and not is_sidearm) or (found_secondary and is_sidearm) then return end
-		
-					-- reduce ammo in loaded weapon
-					local id = item:id()
 					local mag_data = magazine_binder.get_data(id)
 					
+					-- reduce ammo in loaded weapon
 					local mags_to_spawn = math.random(0, get_mag_prop(rank, "max_mags"))
 					local mag_sec = magazine_binder.weapon_default_magazine(sec)
 					local improved_mag_sec = magazine_binder.weapon_improved_magazine(sec)
@@ -700,7 +726,7 @@ if magazines then
 					end
 					
 					-- reset variable as we don't want any issues with other weapon mag loot generation
-					weapon_item = nil
+					weapon_item_id = nil
 					if is_sidearm then
 						found_secondary = true
 					else
@@ -718,21 +744,27 @@ if magazines then
 	if BaseMagsDetermineAmmo then
 		function magazines_loot.determine_ammo(ammo_to_pick, mag_sec, rank)
 			-- npc_on_death ammo generation
-			if (weapon_item) then
-				ammo_class = utils_item.get_ammo(weapon_item:section(), weapon_item:id())
-				-- change section to the correct ammo type
-				if ammo_class and (#ammo_class > 0) then
-					ammo_to_pick = ammo_class[weapon_item:get_ammo_type() + 1]
-					print_dbg("[Mags Determine Ammo] Ammo to be given: %s", ammo_to_pick)
+			if (weapon_item_id) then
+				local weapon = level.object_by_id(weapon_item_id)
+				if weapon then
+					ammo_class = utils_item.get_ammo(weapon:section(), weapon:id())
+					-- change section to the correct ammo type
+					if ammo_class and (#ammo_class > 0) then
+						ammo_to_pick = ammo_class[weapon:get_ammo_type() + 1]
+						print_dbg("[Mags Determine Ammo] Ammo to be given: %s", ammo_to_pick)
+					end
 				end
 				
 			-- set_weapon_drop_condition ammo generation
-			elseif (cond_item) then
-				ammo_class = utils_item.get_ammo(cond_item:section(), cond_item:id())
-				-- change section to the correct ammo type
-				if ammo_class and (#ammo_class > 0) then
-					ammo_to_pick = ammo_class[cond_item:get_ammo_type() + 1]
-					print_dbg("[Mags Determine Ammo] Ammo to be given: %s", ammo_to_pick)
+			elseif (cond_item_id) then
+				local cond_item = level.object_by_id(cond_item_id)
+				if cond_item then
+					ammo_class = utils_item.get_ammo(cond_item:section(), cond_item:id())
+					-- change section to the correct ammo type
+					if ammo_class and (#ammo_class > 0) then
+						ammo_to_pick = ammo_class[cond_item:get_ammo_type() + 1]
+						print_dbg("[Mags Determine Ammo] Ammo to be given: %s", ammo_to_pick)
+					end
 				end
 			end
 			
@@ -741,6 +773,16 @@ if magazines then
 			-- return BaseMagsDetermineAmmo(ammo_to_pick, mag_sec, rank)
 			return ammo_to_pick
 		end
+	end
+end
+
+BaseDeathCreateItem = death_manager.create_release_item
+death_manager.create_release_item = function(npc)
+	if not npc then return end
+	BaseDeathCreateItem(npc)
+	local id = npc:id()
+	if id and adjust_npc_tbl[id] then
+		adjust_npc_tbl[id] = nil
 	end
 end
 
@@ -759,6 +801,8 @@ end
 function on_game_start()
 --	RegisterScriptCallback("npc_on_net_spawn", npc_on_net_spawn)
 	RegisterScriptCallback("on_option_change", on_option_change)
+	RegisterScriptCallback("save_state", save_state)
+    RegisterScriptCallback("load_state", load_state)
 	on_option_change()
 	if enable_mod then
 		RegisterScriptCallback("npc_on_net_spawn", npc_on_net_spawn)
@@ -769,4 +813,12 @@ function on_game_start()
 			end)
 		end
 	end
+end
+
+function save_state(m_data)
+    m_data.adjust_npc_tbl = adjust_npc_tbl or {}
+end
+
+function load_state(m_data)
+    adjust_npc_tbl = m_data.adjust_npc_tbl or {}
 end
