@@ -1,9 +1,9 @@
-local enable_mod = z_cxv_rank_based_ammo_usage_mcm.get_config("enabled")
-local nerf_bs = z_cxv_rank_based_ammo_usage_mcm.get_config("nerf_bs")
-local nerf_mm = z_cxv_rank_based_ammo_usage_mcm.get_config("nerf_mm")
-local buff_south_after_bs = z_cxv_rank_based_ammo_usage_mcm.get_config("buff_south_after_bs")
-local adjust_ammo_loot = z_cxv_rank_based_ammo_usage_mcm.get_config("adjust_ammo_loot")
-local print_debug = z_cxv_rank_based_ammo_usage_mcm.get_config("print_debug")
+local enable_mod = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("enabled")
+local nerf_bs = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("nerf_bs")
+local nerf_mm = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("nerf_mm")
+local buff_south_after_bs = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("buff_south_after_bs")
+local adjust_ammo_loot = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("adjust_ammo_loot")
+local print_debug = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("print_debug")
 
 local adjust_npc_tbl = {}
 local ini_ammo_convert = ini_file("rank_ammo\\importer.ltx")
@@ -63,7 +63,6 @@ map_rank_modifiers = {
 local map_faction_exemptions = {
 	["k00_marsh"] = "csky",
 	["l05_bar"] = "dolg",
-	["l06_rostok"] = "dolg",
 	["l03_agroprom"] = "army",
 	["l04_darkvalley"] = "bandit",
 	["l07_military"] = "freedom",
@@ -326,14 +325,14 @@ function npc_on_net_spawn(npc)
 	-- Monolith in Radar/BS that are not Master/Legend will be read as Experienced
 	-- This will reduce most instances of more dangerous AP ammo from being used
 	-- After BS is turned off, Monolith rank will be read as normal
-	-- Monolith will receive a +1 during Barrier Defense
+	-- Monolith will receive a +2 during Barrier Defense
 	if (npc_comm == "monolith") then
 		if nerf_bs and (rank_enum < 7) and (location_name == "l10_radar" or location_name == "l10u_bunker") then
 			if (not has_alife_info("bar_deactivate_radar_done")) then
 				rank_enum = math.min(rank_enum, 3)
 			end
 		elseif (location_name == "l07_military") and axr_task_manager.ongoing_tasks['barrier_defense_monolith'] then 
-			rank_enum = rank_enum + 1
+			rank_enum = rank_enum + 2
 		end
 	end
 	
@@ -788,13 +787,13 @@ end
 
 function on_option_change()
 	local old_enalbed = enable_mod
-	if ui_mcm and z_cxv_rank_based_ammo_usage_mcm then
-		enable_mod = z_cxv_rank_based_ammo_usage_mcm.get_config("enabled")
-		nerf_bs = z_cxv_rank_based_ammo_usage_mcm.get_config("nerf_bs")
-		nerf_mm = z_cxv_rank_based_ammo_usage_mcm.get_config("nerf_mm")
-		buff_south_after_bs = z_cxv_rank_based_ammo_usage_mcm.get_config("buff_south_after_bs")
-		adjust_ammo_loot = z_cxv_rank_based_ammo_usage_mcm.get_config("adjust_ammo_loot")
-		print_debug = z_cxv_rank_based_ammo_usage_mcm.get_config("print_debug")
+	if ui_mcm and zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm then
+		enable_mod = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("enabled")
+		nerf_bs = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("nerf_bs")
+		nerf_mm = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("nerf_mm")
+		buff_south_after_bs = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("buff_south_after_bs")
+		adjust_ammo_loot = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("adjust_ammo_loot")
+		print_debug = zzzzzzzzzzz_cxv_rank_based_ammo_usage_mcm.get_config("print_debug")
 	end
 end
 
